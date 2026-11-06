@@ -1,0 +1,12 @@
+{
+  "experiment": "arc-fixednorm-control-v2",
+  "methods": [
+    {
+      "name": "isr_fixednorm",
+      "parameters": {
+        "lambda_max": 0.0,
+        "frobenius_target": 1.0
+      }
+    }
+  ]
+}

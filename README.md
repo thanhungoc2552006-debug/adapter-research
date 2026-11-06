@@ -1,150 +1,108 @@
-# PoLAR: Polar-Decomposed Low-Rank Adapter Representation
+# Adapter Research — ARC pipeline
 
+Một pipeline dùng chung cho LoRA, DoRA, PoLAR, ISR và ISR fixed Frobenius norm trên ARC-Easy / ARC-Challenge. Thêm method không cần copy lại worker, tạo app Modal riêng hay viết lại reporter.
 
-This repo hosts PoLAR, a polar-decomposition-inspired reparameterization for fine-tuning LLMs in a parameter-efficient fashion. PoLAR **resolves the rank inefficiency encountered in LoRA** and **boosts performance on downstream tasks for model sizes up to and including 30B.** The paper is available at https://arxiv.org/abs/2506.03133.
+## 1. Cài vào repo đang dùng
 
-### LoRA Suffers from Rank Inefficiency
+Giải nén gói này **ra một thư mục riêng bên ngoài `adapter-research`**. Mở terminal tại thư mục vừa giải nén, nơi có `modal_pipeline.py` và `tools/`.
 
-LoRA often does not fully exploit the low-rank subspace, leading to a low effective (stable) rank. In particular, even if the rank of LoRA is chosen as `r=32` or `r=16`, the stable rank of $\Delta W = BA$ is often close to 1; see an example of applying LoRA to LLaMA2-7B in the figure below. Informally, **LoRA leverages an approximately rank-1 subspace**. 
+Xem trước việc chuyển đổi:
 
-This motivating finding occurs across several datasets and a minimal reproducible example of it is given in the `notebooks/lora_low_effective_rank.ipynb` notebook which evaluates the stable rank of the official LoRA DeBERTa XXL checkpoints.
-
-![Low Directional Diversity](assets/sr-plots.svg)
-
-### How Does PoLAR Address the Rank Inefficiency?
-
-PoLAR is a polar-decomposition-inspired reparameterization of LoRA. In particular, we introduce direction matrices $X$ and $Y$ with orthonormal columns (i.e., $X$ and $Y$ live in Stiefel manifolds), and an unconstrained scale matrix $\Theta$. The low-rank update is then formulated as $\Delta W = X \Theta Y^\top$. Matrices $X$ and $Y$ are optimized using tools from Riemannian optimization. 
-
-Such a co-design of architecture and optimizer significantly improves the stable rank in low-rank adaptation. This is illustrated in the figure above: PoLAR's stable rank varies with `r` and increases throughout training.
-
-## Setup and Dependencies
-
-Dependencies are given in `requirements.txt`. To recreate the environment, please run
-```sh
-cd path/to/polar/repo
-conda create --name polar python=3.10
-conda activate polar
-pip install -r requirements.txt
-```
-Note that the Gemma-3 experiments require newer versions. For the setup, see the section on Gemma-3.
-
-## Results
-
-
-### Commonsense Reasoning with Llama-2-7B
-
-
-| Rank | Adapter | BoolQ | PIQA | SIQA | HeSw | WiGr | ARC‑e | ARC‑c | OBQA | Avg. |
-|------|---------|------:|-----:|-----:|-----:|-----:|------:|------:|-----:|---------:|
-| 4  | LoRA          | 87.16 | 81.01 | 58.85 | 82.36 | 74.35 | 81.90 | 57.68 | 56.80 | 72.51 |
-| 4  | DoRA          | 87.22 | 80.30 | 58.96 | 82.39 | 75.22 | 81.69 | 57.85 | 56.80 | 72.55 |
-| 4  | [PoLAR](https://github.com/kcc-lion/polar/releases/download/llama-2-7b/polar_rank4.zip)         | 87.49 | 82.59 | 59.31 | 81.23 | 81.77 | 81.61 | 56.31 | 55.80 | **73.26** |
-| 8  | LoRA          | 87.34 | 81.07 | 58.80 | 82.68 | 74.66 | 82.24 | 58.11 | 55.80 | 72.59 |
-| 8  | DoRA          | 87.49 | 80.58 | 58.39 | 82.32 | 75.22 | 82.24 | 58.19 | 55.60 | 72.50 |
-| 8  | [PoLAR](https://github.com/kcc-lion/polar/releases/download/llama-2-7b/polar_rank8.zip)         | 87.74 | 82.70 | 59.62 | 82.14 | 82.40 | 81.36 | 56.91 | 55.20 | **73.51** |
-| 16 | LoRA          | 86.94 | 81.18 | 58.96 | 82.57 | 76.01 | 82.58 | 57.85 | 56.00 | 72.76 |
-| 16 | DoRA          | 86.85 | 81.34 | 58.29 | 82.39 | 74.59 | 82.62 | 57.68 | 55.40 | 72.39 |
-| 16 | [PoLAR](https://github.com/kcc-lion/polar/releases/download/llama-2-7b/polar_rank16.zip)         | 88.01 | 82.92 | 59.93 | 82.68 | 81.77 | 81.82 | 57.51 | 57.40 | **74.00** |
-| 32 | LoRA          | 87.89 | 81.56 | 59.06 | 82.51 | 72.61 | 82.37 | 56.83 | 54.60 | 72.18 |
-| 32 | DoRA          | 87.61 | 81.45 | 58.70 | 82.50 | 74.43 | 82.28 | 57.17 | 55.60 | 72.47 |
-| 32 | [PoLAR](https://github.com/kcc-lion/polar/releases/download/llama-2-7b/polar_rank32.zip)         | 88.13 | 82.64 | 60.03 | 83.12 | 82.00 | 81.99 | 56.14 | 55.60 | **73.71** |
-
-To reproduce, please run
-```sh
-bash scripts/train_and_eval.sh <adapter_name> <lr> <reg_lambda> <num_epochs> <rank> <dataset>
-```
-To run the evaluation of checkpoints, please run
-```sh
-bash scripts/eval.sh /path/to/adapter/dir <task> meta-llama/Llama-2-7b-hf
+```powershell
+python tools/install_into_repo.py --root "C:\Users\FPT\Documents\STUDY\LAB\DGM\Implementation\adapter-research"
 ```
 
-For instance, to run PoLAR, LoRA, and DoRA on PIQA with rank 32
+Áp dụng:
 
-```sh
-bash scripts/train_and_eval.sh polar 4e-3 5e-3 5 32 piqa 
-bash scripts/train_and_eval.sh lora 4e-4 5e-3 5 32 piqa 
-bash scripts/train_and_eval.sh dora 4e-4 5e-3 5 32 piqa 
+```powershell
+python tools/install_into_repo.py --root "C:\Users\FPT\Documents\STUDY\LAB\DGM\Implementation\adapter-research" --apply
 ```
 
-### Gemma-3 MetaMathQA
+Code cũ được chuyển vào `archives/unified-migration/<thời điểm>/original/`; không cần tự xóa các runner cũ. Công cụ giữ nguyên `.git`, `.gitignore` hiện có, `reports/`, `run_receipts/` và các thư mục dependency. Dữ liệu trên Modal không bị chuyển hoặc xóa. Chi tiết: [MIGRATION.md](docs/MIGRATION.md).
 
-The experiments with Gemma-3 require newer versions and the environment builds on top of `nvcr.io/nvidia/pytorch:25.03-py3`. To set up the container and run the evaluation of Gemma-3 checkpoints, please run:
+Sau đó mở terminal trong repo:
 
-```sh
-# set up
-export HF_TOKEN=your_hf_token
-cd /path/to/polar/repo
-docker build --file gemma3.Dockerfile -t polar:dev .
-docker run --rm -it --gpus '"device=1,2,3,4"' -e HF_TOKEN=$HF_TOKEN polar:dev
-
-# in container
-bash scripts/eval_docker.sh /path/to/adapter/dir gsm8k google/gemma-3-27b-pt
-
-# remove container
-docker rmi polar:dev
-docker system prune -a
+```powershell
+cd "C:\Users\FPT\Documents\STUDY\LAB\DGM\Implementation\adapter-research"
+python -m pip install -r requirements-local.txt
+python -m adapter_research methods
+python -m adapter_research plan --config configs/arc_fixednorm_r8.json
 ```
 
-### Stable Rank
+Máy local chỉ cần Modal SDK cho các lệnh chạy cloud; không cần cài PyTorch local. Công cụ cài đặt cần Python 3.9 trở lên.
 
-For computation of the stable rank of the official LoRA checkpoints available at https://github.com/microsoft/LoRA, please see `lora_low_effective_rank.ipynb`. The notebook runs easily on google colab.
+## 2. Trước tiên, cập nhật bảng W&B bằng kết quả đã có
 
-To reproduce the stable rank and pairwise distance plot of our trained adapters, please run the following after having trained any of the adapters above. 
-
-```sh
-python stable_rank/analyze_sr.py --peft_model_id=/path/to/ckpt_dir --save_path=/path/to/ckpt_dir
+```powershell
+python -m modal run modal_pipeline.py --stage report --config configs/arc_report_existing.json
 ```
 
-### Retraction/Landing Benchmarking
+Đây là **CPU report**, đọc adapter cuối và evaluation đã lưu; không train lại baseline và không cấp H100. Reporter tìm các experiment trong Volume, bỏ smoke run, chọn ARC-Challenge/rank 8/seed 0 theo config. Nó nhận diện cả code cũ và code mới, bao gồm ISR λ=0.1 và fixed-norm nếu các run tương ứng có đủ file đã lưu.
 
-Please run `runtime_comparison.ipynb`.
+Với entity/project hiện tại và `comparison.label="main"`, reporter dùng lại ID `cmp1a5e96e4fe188cf04116` của bảng so sánh hiện tại. Terminal in link sau khi publish. Nếu đổi label thì tạo bảng so sánh riêng.
 
+Kết quả local ở `reports/comparison_arc_challenge_r8/`: `summary.csv`, `per_module.csv`, `per_layer_norms.csv`, `report.md`, `report.json`, `wandb_comparison.json`. Bản cloud ở `/results/_reports/arc_challenge/r8/main/`.
 
-## Comments
+## 3. Chạy method theo cùng quy trình
 
+Chỉ chạy hai lệnh sau khi muốn **train một experiment mới**; không cần chạy lại chúng để xem kết quả cũ.
 
-### Registration of Custom Module Mapping
-Note that the information about the custom module mapping does not persist when you save the PEFT model. When loading the model, you have to register the custom modules again:
-
-```python
-from peft import PeftModel, PeftConfig
-from peft.tuners.polar.layer import PoLARLinear
-
-peft_config = PeftConfig.from_pretrained(peft)
-custom_module_mapping = {torch.nn.Linear: PoLARLinear}
-# register the new mapping
-peft_config._register_custom_module(custom_module_mapping)
-model = PeftModel.from_pretrained(self._model, peft, revision=revision, config=peft_config)
+```powershell
+python -m modal run --detach modal_pipeline.py --stage smoke --config configs/arc_fixednorm_r8.json
+python -m modal run --detach modal_pipeline.py --stage train --config configs/arc_fixednorm_r8.json
 ```
 
-### Changes to lm-evaluation-harness
+Smoke: 2 optimizer updates, đánh giá giới hạn 16 mẫu, lưu riêng `_smoke/`. Xem smoke thành công rồi mới chạy train. Train: dùng protocol đầy đủ và sau đó tự chạy CPU report để thêm kết quả vào cùng bảng W&B.
 
-We require an editable install of lm-evaluation-harness due to the following:
+Pipeline tái sử dụng Secret `polar-credentials`, Volume `polar-table2-results`, cache `polar-table2-hf-cache` và các layer image phù hợp. CPU setup kiểm tra quyền truy cập/provenance và chuẩn bị cache trước khi cấp GPU. Thay source có thể cần build lại layer chứa code; không cần tạo lại credentials hoặc các Volume. Chọn đúng Modal profile/workspace `thanh101pedri8` và environment `main` như trước.
 
-* Registration of custom module mapping in `lm_eval/models/huggingface.py`. See discussion above.
-* Avoidance of `vocab_size` check for Gemma 3 which raises `AttributeError`. See issue https://github.com/huggingface/transformers/issues/36683.
-* Adapting `doc_to_text` in `tasks/gsm8k/gsm8k.yaml` and `tasks/hendrycks_math/hendrycks_math.yaml`.
+| Config | Mục đích |
+|---|---|
+| `arc_report_existing.json` | Tổng hợp kết quả cũ, CPU |
+| `arc_fixednorm_r8.json` | ARC-C/r8, ISR λ=0.1, Frobenius target 1 |
+| `arc_fixednorm_control_r8.json` | ARC-C/r8, rescale nhưng λ=0, làm đối chứng |
+| `arc_isr_r8.json` | ARC-C/r8, ISR λ=0.01, không rescale |
+| `arc_baselines_r8.json` | Train lại LoRA/DoRA/PoLAR trong experiment v2 nếu chủ động muốn |
+| `arc_both_tasks.json` | Fixed-norm trên cả ARC-E và ARC-C |
 
+Mặc định dùng **một H100**, các cấu hình chạy lần lượt. Baseline cũ được dùng làm dữ liệu so sánh; không tự train lại khi chạy config của ISR/fixed-norm. Rerun cùng config bỏ qua cấu hình đã hoàn tất trước khi cấp GPU; cấu hình dở dang dùng checkpoint hợp lệ.
 
-### Other
-* The registration of the parameterization was used for research purposes only and can be disabled in practical scenarios to increase runtime efficiency. The appropriate line to comment out is line 119 in `peft/src/peft/tuners/polar/layer.py`.
+## 4. Thêm method tiếp theo
 
-### Credits
-
-* The `finetune_commonsense.py` script is originally adapted from https://github.com/tloen/alpaca-lora/blob/main/finetune.py.
-* The lm-evaluation-harness is taken from https://github.com/EleutherAI/lm-evaluation-harness.
-* The editable PEFT version is based on v0.14.1.dev0 of https://github.com/huggingface/peft.
-* The `run_glue.py` script is adapted from https://github.com/huggingface/transformers/blob/main/examples/pytorch/text-classification/run_glue.py.
-
-### Citation
-
+```powershell
+python -m adapter_research new-method --name my_method
 ```
-@misc{lion_polar_2025,
-	title = {{PoLAR}: {Polar}-{Decomposed} {Low}-{Rank} {Adapter} {Representation}},
-	shorttitle = {{PoLAR}},
-	url = {https://arxiv.org/abs/2506.03133},
-	journal = {arXiv.org},
-	author = {Lion, Kai and Zhang, Liang and Li, Bingcong and He, Niao},
-	year = {2025},
-}
+
+Lệnh tạo:
+
+```text
+adapter_research/methods/my_method/__init__.py
+adapter_research/methods/my_method/controller.py
+configs/arc_my_method_r8.json
 ```
+
+Sửa loss trong `controller.py`, sửa tham số trong config, rồi dùng cùng các lệnh `plan → smoke → train` với config mới. Registry tự nhận method; reporter tự lấy tên/λ/ρ từ metadata. **Template mới ban đầu vẫn dùng nguyên toán học ISR**; cần implement ý tưởng của bạn trước khi xem nó là một method khác.
+
+Hướng dẫn giao diện controller, checkpoint và cách thêm hyperparameter: [ADDING_METHOD.md](docs/ADDING_METHOD.md).
+
+## Cấu trúc và kết quả đo
+
+```text
+modal_pipeline.py          Một entrypoint Modal
+configs/                   Chọn task, method và hyperparameter
+adapter_research/methods/  Chỉ phần riêng của từng method
+adapter_research/pipeline/ Setup, train, checkpoint, evaluation dùng chung
+adapter_research/reporting/Đọc run cũ/mới, tính norm, publish W&B
+tests/                     Kiểm tra toán học và pipeline
+docs/                      Kiến trúc, chuyển đổi, thêm method, validation
+tools/                     Công cụ cài đặt
+legacy/                    Source cũ để tra cứu và resume experiment cũ
+```
+
+Đo **ΔW thực sự**: LoRA/ISR là `γBA`, PoLAR dùng factorization tương ứng. Reporter tính spectral/Frobenius/stable rank cho từng module ở từng layer từ adapter cuối bằng QR/SVD nhỏ, kiểm tra đủ 160 adapter. DoRA chưa có phép dựng đầy đủ ΔW từ base + magnitude trong reporter này nên các norm là N/A; vẫn báo accuracy.
+
+Biểu đồ norm theo `Layer` mô tả adapter **cuối training giữa các layer**, không phải diễn biến theo thời gian. Log training/projection dùng `train/global_step` mới cho biết thay đổi qua các update. Sai số `acc_norm_stderr` là sai số chuẩn theo tập đánh giá, không phải độ lệch chuẩn qua nhiều seed.
+
+Protocol mặc định giữ bản gốc: Llama-2-7B, rank 8, alpha 32, dropout .05, effective batch 128, microbatch 1, epochs 5, cutoff 512. Số optimizer updates do Trainer và kích thước task quyết định; ARC-C trong pipeline cũ khoảng 40, ARC-E khoảng 85. Không diễn giải 40 là giới hạn chung cho mọi config. `acc_norm` của harness đã pin chuẩn hóa theo **độ dài ký tự** của đáp án.
+
+Các checkpoint v1 không được resume trực tiếp bằng trainer v2. Kết quả v1 vẫn được đọc để so sánh; training mới dùng tên experiment v2 và kế thừa model/dataset revisions của baseline. Xem [ARCHITECTURE.md](docs/ARCHITECTURE.md) và [VALIDATION.md](docs/VALIDATION.md).

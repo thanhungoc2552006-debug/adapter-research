@@ -1,0 +1,11 @@
+{
+  "experiment": "arc-isr-v2",
+  "methods": [
+    {
+      "name": "isr",
+      "parameters": {
+        "lambda_max": 0.01
+      }
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "experiment": "arcc-isr-fixednorm-rho1-lam0p1-v1",
+  "comparison": {
+    "discover": true,
+    "after_train": false
+  }
+}

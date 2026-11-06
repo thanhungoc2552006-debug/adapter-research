@@ -1,0 +1,8 @@
+{
+  "experiment": "arc-baselines-v2",
+  "methods": [
+    "lora",
+    "dora",
+    "polar"
+  ]
+}
